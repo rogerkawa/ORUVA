@@ -8,6 +8,7 @@ import departmentRoutes from './departmentRoutes.js';
 import teamRoutes from './teamRoutes.js';
 import categoryRoutes from './categoryRoutes.js';
 import slaPolicyRoutes from './slaPolicyRoutes.js';
+import demandRoutes from './demandRoutes.js';
 
 const routes = Router();
 
@@ -19,5 +20,6 @@ routes.use('/departments', departmentRoutes);
 routes.use('/teams', teamRoutes);
 routes.use('/categories', categoryRoutes);
 routes.use('/sla-policies', slaPolicyRoutes);
+routes.use('/demands', demandRoutes);
 
 export default routes;
