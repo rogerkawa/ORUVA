@@ -36,7 +36,6 @@ const demandModel = {
 
     // Buscar uma política de SLA aplicável.
     async buscarPoliticaSla(connection, companyId, categoryId, priority) {
-        // Primeiro, procura uma política específica da categoria.
         const [specificPolicies] = await connection.execute(
             `SELECT id, first_response_minutes, resolution_minutes
              FROM sla_policies
@@ -60,7 +59,6 @@ const demandModel = {
             return specificPolicies[0];
         }
 
-        // Se não houver política específica, procura uma política geral.
         const [generalPolicies] = await connection.execute(
             `SELECT id, first_response_minutes, resolution_minutes
              FROM sla_policies
@@ -151,15 +149,6 @@ const demandModel = {
                 throw error;
             }
 
-            // Aprovação ainda não possui status próprio na tabela demands.
-            if (category.requires_approval) {
-                const error = new Error(
-                    'Esta categoria exige aprovação. O fluxo de aprovação ainda precisa ser configurado.'
-                );
-                error.code = 'APPROVAL_FLOW_NOT_IMPLEMENTED';
-                throw error;
-            }
-
             // Solicitante.
             const requesterValid = await this.validarMembro(
                 connection,
@@ -190,14 +179,80 @@ const demandModel = {
                 throw error;
             }
 
+            // Buscar e validar as etapas de aprovação da categoria.
+            let approvalSteps = [];
+
+            if (category.requires_approval) {
+                const [steps] = await connection.execute(
+                    `SELECT
+                        cas.approver_member_id,
+                        cas.step_order,
+                        cm.status AS member_status,
+                        u.status AS user_status
+                     FROM category_approval_steps cas
+                     INNER JOIN company_members cm
+                        ON cm.id = cas.approver_member_id
+                    INNER JOIN users u
+                        ON u.id = cm.user_id
+                    WHERE cas.category_id = ?
+                    AND cm.company_id = ?
+                     ORDER BY cas.step_order ASC`,
+                    [categoryId, companyId]
+                );
+
+                if (!steps.length) {
+                    const error = new Error(
+                        'Esta categoria exige aprovação, mas não possui aprovadores configurados.'
+                    );
+                    error.code = 'APPROVAL_STEPS_NOT_CONFIGURED';
+                    throw error;
+                }
+
+                // Todos os aprovadores precisam estar ativos.
+                const inactiveApprover = steps.some(
+                    step =>
+                        step.member_status !== 'active' ||
+                        step.user_status !== 'active'
+                );
+
+                if (inactiveApprover) {
+                    const error = new Error(
+                        'Um ou mais aprovadores configurados estão inativos.'
+                    );
+                    error.code = 'APPROVER_NOT_ACTIVE';
+                    throw error;
+                }
+
+                // O solicitante não pode aprovar a própria demanda.
+                const requesterIsApprover = steps.some(
+                    step =>
+                        String(step.approver_member_id) ===
+                        String(requesterMemberId)
+                );
+
+                if (requesterIsApprover) {
+                    const error = new Error(
+                        'O solicitante da demanda não pode participar do próprio fluxo de aprovação.'
+                    );
+                    error.code = 'APPROVER_IS_REQUESTER';
+                    throw error;
+                }
+
+                approvalSteps = steps;
+            }
+
+            // Determinar status inicial.
+            const initialStatus = category.requires_approval
+                ? 'pending_approval'
+                : 'open';
+
             // Equipe: utiliza a equipe informada ou a equipe padrão da categoria.
             const selectedTeamId = teamId || category.default_team_id;
 
             let departmentId = category.department_id;
-            let validatedTeam = null;
 
             if (selectedTeamId) {
-                validatedTeam = await this.validarEquipe(
+                const validatedTeam = await this.validarEquipe(
                     connection,
                     selectedTeamId,
                     companyId
@@ -242,7 +297,7 @@ const demandModel = {
                 ? JSON.stringify(formData)
                 : null;
 
-            // Criar demanda.
+            // Criar demanda com o status inicial correto.
             const [result] = await connection.execute(
                 `INSERT INTO demands (
                     company_id,
@@ -257,12 +312,13 @@ const demandModel = {
                     title,
                     description,
                     priority,
+                    status,
                     source,
                     form_data,
                     first_response_due_at,
                     resolution_due_at
                 ) VALUES (
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                     CASE
                         WHEN ? IS NOT NULL
                         THEN DATE_ADD(
@@ -293,6 +349,7 @@ const demandModel = {
                     title,
                     description,
                     priority,
+                    initialStatus,
                     source,
                     serializedFormData,
                     slaPolicy?.id || null,
@@ -308,18 +365,39 @@ const demandModel = {
 
             const demandId = insertedDemand.id;
 
+            // Registrar atribuição inicial da equipe, quando houver.
             if (selectedTeamId) {
                 await connection.execute(
                     `INSERT INTO demand_assignments (
-            demand_id,
-            team_id,
-            assigned_member_id,
-            assigned_by_member_id
-        ) VALUES (?, ?, NULL, ?)`,
+                        demand_id,
+                        team_id,
+                        assigned_member_id,
+                        assigned_by_member_id
+                    ) VALUES (?, ?, NULL, ?)`,
                     [
                         demandId,
                         selectedTeamId,
                         openedByMemberId
+                    ]
+                );
+            }
+
+            // Copiar as etapas de aprovação para a demanda.
+            // A configuração ficará independente de futuras alterações na categoria.
+            for (const step of approvalSteps) {
+                await connection.execute(
+                    `INSERT INTO demand_approvals (
+                        demand_id,
+                        approver_member_id,
+                        requested_by_member_id,
+                        step_order,
+                        status
+                    ) VALUES (?, ?, ?, ?, 'pending')`,
+                    [
+                        demandId,
+                        step.approver_member_id,
+                        openedByMemberId,
+                        step.step_order
                     ]
                 );
             }
@@ -343,19 +421,44 @@ const demandModel = {
                         type,
                         title,
                         priority,
-                        status: 'open',
+                        status: initialStatus,
                         categoryId,
                         teamId: selectedTeamId
                     })
                 ]
             );
 
+            // Histórico de solicitação de aprovação.
+            if (category.requires_approval) {
+                await connection.execute(
+                    `INSERT INTO demand_history (
+                        demand_id,
+                        actor_member_id,
+                        event_type,
+                        description,
+                        new_value
+                    ) VALUES (?, ?, ?, ?, ?)`,
+                    [
+                        demandId,
+                        openedByMemberId,
+                        'demand.approval_requested',
+                        'Demanda enviada para o fluxo de aprovação.',
+                        JSON.stringify({
+                            totalSteps: approvalSteps.length,
+                            status: 'pending_approval'
+                        })
+                    ]
+                );
+            }
+
             await connection.commit();
 
             return {
                 id: demandId,
                 demandNumber,
-                status: 'open'
+                status: initialStatus,
+                requiresApproval: Boolean(category.requires_approval),
+                approvalSteps: approvalSteps.length
             };
 
         } catch (error) {
@@ -379,7 +482,6 @@ const demandModel = {
         const conditions = ['d.company_id = ?'];
         const params = [companyId];
 
-        // Colaboradores visualizam somente demandas próprias.
         if (role === 'collaborator') {
             conditions.push(
                 '(d.requester_member_id = ? OR d.opened_by_member_id = ?)'
@@ -565,7 +667,6 @@ const demandModel = {
         try {
             await connection.beginTransaction();
 
-            // Bloquear a demanda durante a operação.
             const [demands] = await connection.execute(
                 `SELECT
                     id,
@@ -588,9 +689,12 @@ const demandModel = {
                 throw error;
             }
 
-            if (['closed', 'canceled'].includes(demand.status)) {
+            if (
+                ['pending_approval', 'rejected', 'closed', 'canceled']
+                    .includes(demand.status)
+            ) {
                 const error = new Error(
-                    'Não é possível atribuir uma demanda encerrada ou cancelada.'
+                    'Não é possível atribuir uma demanda aguardando aprovação, rejeitada ou encerrada.'
                 );
                 error.code = 'DEMAND_NOT_ASSIGNABLE';
                 throw error;
@@ -608,7 +712,6 @@ const demandModel = {
                 throw error;
             }
 
-            // Validar equipe.
             let team = null;
 
             if (teamId) {
@@ -633,7 +736,6 @@ const demandModel = {
                 }
             }
 
-            // Validar membro.
             let member = null;
 
             if (assignedMemberId) {
@@ -659,7 +761,6 @@ const demandModel = {
                     throw error;
                 }
 
-                // Quando uma equipe é informada, o membro precisa fazer parte dela.
                 if (teamId) {
                     const [teamMembership] = await connection.execute(
                         `SELECT tm.id
@@ -692,7 +793,6 @@ const demandModel = {
                 throw error;
             }
 
-            // Evitar movimentações sem alteração.
             if (
                 String(demand.team_id || '') === String(teamId || '') &&
                 String(demand.assigned_member_id || '') === String(assignedMemberId || '')
@@ -704,16 +804,14 @@ const demandModel = {
                 throw error;
             }
 
-            // Encerrar atribuições anteriores ainda abertas.
             await connection.execute(
                 `UPDATE demand_assignments
-                 SET ended_at = UTC_TIMESTAMP()
+                 SET ended_at = CURRENT_TIMESTAMP
                  WHERE demand_id = ?
                    AND ended_at IS NULL`,
                 [demandId]
             );
 
-            // Registrar a nova atribuição.
             await connection.execute(
                 `INSERT INTO demand_assignments (
                     demand_id,
@@ -729,7 +827,6 @@ const demandModel = {
                 ]
             );
 
-            // Atualizar a atribuição atual na demanda.
             await connection.execute(
                 `UPDATE demands
                  SET team_id = ?,
@@ -766,7 +863,6 @@ const demandModel = {
                 ? 'Atribuição da demanda transferida.'
                 : 'Demanda atribuída.';
 
-            // Registrar movimentação no histórico.
             await connection.execute(
                 `INSERT INTO demand_history (
                     demand_id,
@@ -807,6 +903,196 @@ const demandModel = {
             connection.release();
         }
     },
+
+    // Atualizar status de uma demanda.
+    async atualizarStatus({
+        demandId,
+        companyId,
+        actorMemberId,
+        newStatus
+    }) {
+        const connection = await conect.getConnection();
+
+        try {
+            await connection.beginTransaction();
+
+            const [demands] = await connection.execute(
+                `SELECT
+                    id,
+                    status,
+                    resolved_at,
+                    closed_at
+                 FROM demands
+                 WHERE id = ?
+                   AND company_id = ?
+                 LIMIT 1
+                 FOR UPDATE`,
+                [demandId, companyId]
+            );
+
+            const demand = demands[0];
+
+            if (!demand) {
+                const error = new Error('Demanda não encontrada.');
+                error.code = 'DEMAND_NOT_FOUND';
+                throw error;
+            }
+
+            const actorValid = await this.validarMembro(
+                connection,
+                actorMemberId,
+                companyId
+            );
+
+            if (!actorValid) {
+                const error = new Error(
+                    'Responsável pela alteração não encontrado ou inativo.'
+                );
+                error.code = 'ACTOR_NOT_FOUND';
+                throw error;
+            }
+
+            const currentStatus = demand.status;
+
+            // Aprovação e rejeição não podem ser realizadas por esta operação.
+            if (currentStatus === 'pending_approval') {
+                const error = new Error(
+                    'Esta demanda precisa passar pelo fluxo de aprovação antes de ter seu status alterado.'
+                );
+                error.code = 'APPROVAL_DECISION_REQUIRED';
+                throw error;
+            }
+
+            const transitions = {
+                pending_approval: [],
+
+                open: [
+                    'in_progress',
+                    'canceled'
+                ],
+
+                in_progress: [
+                    'waiting_requester',
+                    'waiting_third_party',
+                    'resolved',
+                    'canceled'
+                ],
+
+                waiting_requester: [
+                    'in_progress',
+                    'resolved',
+                    'canceled'
+                ],
+
+                waiting_third_party: [
+                    'in_progress',
+                    'resolved',
+                    'canceled'
+                ],
+
+                resolved: [
+                    'closed',
+                    'in_progress'
+                ],
+
+                closed: [],
+
+                canceled: [],
+
+                rejected: []
+            };
+
+            if (!transitions[currentStatus]?.includes(newStatus)) {
+                const error = new Error(
+                    `Não é permitido alterar o status de ${currentStatus} para ${newStatus}.`
+                );
+                error.code = 'INVALID_STATUS_TRANSITION';
+                throw error;
+            }
+
+            await connection.execute(
+                `UPDATE demands
+                 SET
+                    status = ?,
+
+                    resolved_at = CASE
+                        WHEN ? = 'resolved'
+                            THEN CURRENT_TIMESTAMP
+
+                        WHEN ? = 'in_progress'
+                            AND ? = 'resolved'
+                            THEN NULL
+
+                        ELSE resolved_at
+                    END,
+
+                    closed_at = CASE
+                        WHEN ? = 'closed'
+                            THEN CURRENT_TIMESTAMP
+
+                        ELSE NULL
+                    END
+
+                 WHERE id = ?
+                   AND company_id = ?`,
+                [
+                    newStatus,
+                    newStatus,
+                    newStatus,
+                    currentStatus,
+                    newStatus,
+                    demandId,
+                    companyId
+                ]
+            );
+
+            await connection.execute(
+                `INSERT INTO demand_history (
+                    demand_id,
+                    actor_member_id,
+                    event_type,
+                    description,
+                    old_value,
+                    new_value
+                 ) VALUES (?, ?, ?, ?, ?, ?)`,
+                [
+                    demandId,
+                    actorMemberId,
+                    'demand.status_changed',
+                    `Status alterado de ${currentStatus} para ${newStatus}.`,
+                    JSON.stringify({
+                        status: currentStatus
+                    }),
+                    JSON.stringify({
+                        status: newStatus
+                    })
+                ]
+            );
+
+            await connection.commit();
+
+            return {
+                demandId,
+                previousStatus: currentStatus,
+                status: newStatus,
+                resolvedAt: newStatus === 'resolved'
+                    ? 'CURRENT_TIMESTAMP'
+                    : newStatus === 'in_progress' && currentStatus === 'resolved'
+                        ? null
+                        : demand.resolved_at,
+                closedAt: newStatus === 'closed'
+                    ? 'CURRENT_TIMESTAMP'
+                    : null
+            };
+
+        } catch (error) {
+            await connection.rollback();
+            throw error;
+
+        } finally {
+            connection.release();
+        }
+    }
 
 };
 

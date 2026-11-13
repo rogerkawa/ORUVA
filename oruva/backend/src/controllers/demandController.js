@@ -1,7 +1,6 @@
 
 import demandModel from '../models/demandModel.js';
 
-
 async function processarAtribuicao(req, res, transferir = false) {
     try {
         const { id } = req.params;
@@ -111,7 +110,6 @@ async function processarAtribuicao(req, res, transferir = false) {
     }
 }
 
-
 const demandController = {
 
     // Criar demanda.
@@ -169,9 +167,7 @@ const demandController = {
                 });
             }
 
-            if (
-                !['ticket', 'service_request'].includes(type)
-            ) {
+            if (!['ticket', 'service_request'].includes(type)) {
                 return res.status(400).json({
                     message: 'Tipo de demanda inválido.'
                 });
@@ -244,8 +240,8 @@ const demandController = {
                 companyId,
                 requesterMemberId: requesterId,
                 openedByMemberId,
-                categoryId,
-                teamId: teamId || null,
+                categoryId: String(categoryId),
+                teamId: teamId ? String(teamId) : null,
                 type,
                 title: title.trim(),
                 description: description?.trim() || null,
@@ -255,7 +251,9 @@ const demandController = {
             });
 
             return res.status(201).json({
-                message: 'Demanda criada com sucesso.',
+                message: demand.requiresApproval
+                    ? 'Demanda criada e enviada para aprovação.'
+                    : 'Demanda criada com sucesso.',
                 demand
             });
 
@@ -263,14 +261,55 @@ const demandController = {
             console.error('Erro ao criar demanda:', error);
 
             const errors = {
-                CATEGORY_NOT_FOUND: [404, 'Categoria não encontrada ou inativa.'],
-                INVALID_DEMAND_TYPE: [400, 'Tipo não permitido para esta categoria.'],
-                APPROVAL_FLOW_NOT_IMPLEMENTED: [409, error.message],
-                REQUESTER_NOT_FOUND: [404, 'Solicitante não encontrado.'],
-                OPENER_NOT_FOUND: [403, 'Membro responsável pela abertura inválido.'],
-                TEAM_NOT_FOUND: [404, 'Equipe não encontrada ou inativa.'],
-                TEAM_DEPARTMENT_MISMATCH: [400, 'Equipe incompatível com o departamento da categoria.'],
-                SLA_POLICY_AMBIGUOUS: [409, error.message]
+                CATEGORY_NOT_FOUND: [
+                    404,
+                    'Categoria não encontrada ou inativa.'
+                ],
+
+                INVALID_DEMAND_TYPE: [
+                    400,
+                    'Tipo não permitido para esta categoria.'
+                ],
+
+                APPROVAL_STEPS_NOT_CONFIGURED: [
+                    400,
+                    'Esta categoria exige aprovação, mas não possui aprovadores configurados.'
+                ],
+
+                APPROVER_NOT_ACTIVE: [
+                    400,
+                    'Um ou mais aprovadores configurados estão inativos.'
+                ],
+
+                APPROVER_IS_REQUESTER: [
+                    400,
+                    'O solicitante não pode aprovar a própria demanda.'
+                ],
+
+                REQUESTER_NOT_FOUND: [
+                    404,
+                    'Solicitante não encontrado.'
+                ],
+
+                OPENER_NOT_FOUND: [
+                    403,
+                    'Membro responsável pela abertura inválido.'
+                ],
+
+                TEAM_NOT_FOUND: [
+                    404,
+                    'Equipe não encontrada ou inativa.'
+                ],
+
+                TEAM_DEPARTMENT_MISMATCH: [
+                    400,
+                    'Equipe incompatível com o departamento da categoria.'
+                ],
+
+                SLA_POLICY_AMBIGUOUS: [
+                    409,
+                    error.message
+                ]
             };
 
             const response = errors[error.code];
@@ -317,7 +356,9 @@ const demandController = {
                 'waiting_third_party',
                 'resolved',
                 'closed',
-                'canceled'
+                'canceled',
+                'pending_approval',
+                'rejected'
             ];
 
             const validPriorities = [
@@ -446,6 +487,105 @@ const demandController = {
         }
     },
 
+    // Alterar status de uma demanda.
+    async alterarStatus(req, res) {
+        try {
+            const { id } = req.params;
+            const { status } = req.body;
+
+            const companyId = req.empresa?.company_id;
+            const actorMemberId = req.empresa?.company_member_id;
+            const role = req.empresa?.role;
+
+            if (!/^[1-9]\d*$/.test(id)) {
+                return res.status(400).json({
+                    message: 'Identificador de demanda inválido.'
+                });
+            }
+
+            if (!companyId || !actorMemberId) {
+                return res.status(403).json({
+                    message: 'Empresa não identificada na sessão.'
+                });
+            }
+
+            if (!['admin', 'manager', 'agent'].includes(role)) {
+                return res.status(403).json({
+                    message: 'Você não tem permissão para alterar o status das demandas.'
+                });
+            }
+
+            // Estados operacionais. Aprovação e rejeição possuem endpoints próprios.
+            const validStatuses = [
+                'open',
+                'in_progress',
+                'waiting_requester',
+                'waiting_third_party',
+                'resolved',
+                'closed',
+                'canceled'
+            ];
+
+            if (
+                typeof status !== 'string' ||
+                !validStatuses.includes(status)
+            ) {
+                return res.status(400).json({
+                    message: 'Status informado é inválido.'
+                });
+            }
+
+            const result = await demandModel.atualizarStatus({
+                demandId: id,
+                companyId,
+                actorMemberId,
+                newStatus: status
+            });
+
+            return res.status(200).json({
+                message: 'Status da demanda atualizado com sucesso.',
+                demand: result
+            });
+
+        } catch (error) {
+            console.error('Erro ao alterar status da demanda:', error);
+
+            const errors = {
+                DEMAND_NOT_FOUND: [
+                    404,
+                    'Demanda não encontrada.'
+                ],
+
+                ACTOR_NOT_FOUND: [
+                    403,
+                    'Responsável pela alteração não encontrado ou inativo.'
+                ],
+
+                APPROVAL_DECISION_REQUIRED: [
+                    409,
+                    'Esta demanda precisa passar pelo fluxo de aprovação antes de ter seu status alterado.'
+                ],
+
+                INVALID_STATUS_TRANSITION: [
+                    409,
+                    error.message
+                ]
+            };
+
+            const response = errors[error.code];
+
+            if (response) {
+                return res.status(response[0]).json({
+                    message: response[1]
+                });
+            }
+
+            return res.status(500).json({
+                message: 'Erro interno ao alterar o status da demanda.'
+            });
+        }
+    },
+
     // Atribuir demanda.
     async atribuir(req, res) {
         return processarAtribuicao(req, res, false);
@@ -454,7 +594,7 @@ const demandController = {
     // Transferir demanda.
     async transferir(req, res) {
         return processarAtribuicao(req, res, true);
-    },
+    }
 
 };
 
