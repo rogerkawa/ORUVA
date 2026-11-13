@@ -2,7 +2,7 @@
 import departmentModel from '../models/departmentModel.js';
 
 function validarId(id) {
-    return Number.isSafeInteger(Number(id)) && Number(id) > 0;
+    return typeof id === 'string' && /^[1-9]\d*$/.test(id);
 }
 
 function validarResponsavelId(id) {
@@ -10,11 +10,11 @@ function validarResponsavelId(id) {
         return null;
     }
 
-    if (!validarId(id)) {
+    if (!validarId(String(id))) {
         return undefined;
     }
 
-    return Number(id);
+    return String(id);
 }
 
 const departmentController = {
