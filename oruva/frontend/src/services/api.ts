@@ -1,6 +1,6 @@
 
 const API_URL = import.meta.env.VITE_API_URL?.replace(/\/+$/, '');
-
+console.log('API configurada:', API_URL);
 export class ApiError extends Error {
     status: number;
     data: unknown;

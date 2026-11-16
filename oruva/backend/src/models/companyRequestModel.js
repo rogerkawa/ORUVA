@@ -1,6 +1,26 @@
 
 import conect from '../config/database.js';
 
+// Normaliza documentos antigos que possam estar armazenados
+// com pontuação ou letras minúsculas.
+const documentoNormalizadoSQL = `
+    UPPER(
+        REPLACE(
+            REPLACE(
+                REPLACE(
+                    REPLACE(document, '.', ''),
+                    '/',
+                    ''
+                ),
+                '-',
+                ''
+            ),
+            ' ',
+            ''
+        )
+    )
+`;
+
 const companyRequestModel = {
 
     // Criar uma solicitação de acesso
@@ -89,20 +109,62 @@ const companyRequestModel = {
         return resultado[0] || null;
     },
 
-    // Aprovar solicitação e criar empresa em uma única transação
+    // Verificar se o CNPJ já está cadastrado ou em outra solicitação pendente
+    async buscarDuplicidadeDocumento(documento) {
 
+        // Primeiro verifica empresas já cadastradas
+        const [empresas] = await conect.execute(
+            `SELECT id
+            FROM companies
+            WHERE document IS NOT NULL
+                AND document <> ''
+                AND ${documentoNormalizadoSQL} = ?
+            LIMIT 1`,
+            [documento]
+        );
+
+        if (empresas.length > 0) {
+            return {
+                tipo: 'empresa',
+                id: empresas[0].id
+            };
+        }
+
+        // Depois verifica solicitações ainda pendentes
+        const [solicitacoes] = await conect.execute(
+            `SELECT id
+            FROM company_requests
+            WHERE document IS NOT NULL
+                AND document <> ''
+                AND ${documentoNormalizadoSQL} = ?
+                AND status = 'pending'
+            LIMIT 1`,
+            [documento]
+        );
+
+        if (solicitacoes.length > 0) {
+            return {
+                tipo: 'solicitacao',
+                id: solicitacoes[0].id
+            };
+        }
+
+        return null;
+    },
+
+    // Aprovar solicitação e criar empresa em uma única transação
     async aprovar(id, reviewerId, slug) {
         const conexao = await conect.getConnection();
 
         try {
             await conexao.beginTransaction();
 
-            // Bloqueia a solicitação para evitar aprovações simultâneas
+            // 1. Bloqueia a solicitação durante a operação
             const [solicitacoes] = await conexao.execute(
                 `SELECT *
-            FROM company_requests
-            WHERE id = ?
-            FOR UPDATE`,
+                FROM company_requests
+                WHERE id = ?
+                FOR UPDATE`,
                 [id]
             );
 
@@ -116,16 +178,58 @@ const companyRequestModel = {
                 throw new Error('SOLICITACAO_JA_ANALISADA');
             }
 
-            // Garante que o slug seja único
+            // 2. Verifica novamente o CNPJ antes de criar a empresa
+            if (solicitacao.document) {
+
+                // Verifica se já existe uma empresa com o documento
+                const [empresasExistentes] = await conexao.execute(
+                    `SELECT id
+                    FROM companies
+                    WHERE document IS NOT NULL
+                        AND document <> ''
+                        AND ${documentoNormalizadoSQL} = ?
+                    LIMIT 1
+                    FOR UPDATE`,
+                    [solicitacao.document]
+                );
+
+                if (empresasExistentes.length > 0) {
+                    throw new Error('CNPJ_JA_CADASTRADO');
+                }
+
+                // Verifica se existe outra solicitação pendente
+                // utilizando o mesmo CNPJ.
+                const [outrasSolicitacoes] = await conexao.execute(
+                    `SELECT id
+                    FROM company_requests
+                    WHERE document IS NOT NULL
+                        AND document <> ''
+                        AND ${documentoNormalizadoSQL} = ?
+                        AND status = 'pending'
+                        AND id <> ?
+                    LIMIT 1
+                    FOR UPDATE`,
+                    [
+                        solicitacao.document,
+                        id
+                    ]
+                );
+
+                if (outrasSolicitacoes.length > 0) {
+                    throw new Error('CNPJ_EM_SOLICITACAO');
+                }
+            }
+
+            // 3. Garante que o slug seja único
             let slugFinal = slug;
             let contador = 1;
 
             while (true) {
                 const [slugsExistentes] = await conexao.execute(
                     `SELECT id
-                FROM companies
-                WHERE slug = ?
-                LIMIT 1`,
+                    FROM companies
+                    WHERE slug = ?
+                    LIMIT 1`,
                     [slugFinal]
                 );
 
@@ -137,17 +241,17 @@ const companyRequestModel = {
                 contador++;
             }
 
-            // Cria a empresa
+            // 4. Cria a empresa
             const [empresa] = await conexao.execute(
                 `INSERT INTO companies (
-                name,
-                trade_name,
-                slug,
-                document,
-                email,
-                phone,
-                status
-            ) VALUES (?, ?, ?, ?, ?, ?, 'active')`,
+                    name,
+                    trade_name,
+                    slug,
+                    document,
+                    email,
+                    phone,
+                    status
+                ) VALUES (?, ?, ?, ?, ?, ?, 'active')`,
                 [
                     solicitacao.company_name,
                     solicitacao.trade_name,
@@ -160,15 +264,15 @@ const companyRequestModel = {
 
             const companyId = empresa.insertId;
 
-            // Atualiza a solicitação
+            // 5. Atualiza a solicitação
             await conexao.execute(
                 `UPDATE company_requests
-            SET
-                status = 'approved',
-                reviewed_by_user_id = ?,
-                reviewed_at = CURRENT_TIMESTAMP,
-                company_id = ?
-            WHERE id = ?`,
+                SET
+                    status = 'approved',
+                    reviewed_by_user_id = ?,
+                    reviewed_at = CURRENT_TIMESTAMP,
+                    company_id = ?
+                WHERE id = ?`,
                 [
                     reviewerId,
                     companyId,
@@ -193,7 +297,6 @@ const companyRequestModel = {
             conexao.release();
         }
     },
-
 
     // Recusar solicitação
     async recusar(id, reviewerId, rejectionReason) {
