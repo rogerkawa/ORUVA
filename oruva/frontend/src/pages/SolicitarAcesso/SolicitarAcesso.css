@@ -1,0 +1,419 @@
+
+.request-page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--color-canvas);
+}
+
+/* Header */
+
+.request-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 23px 7%;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-paper);
+}
+
+/* Identidade Oruva */
+
+.request-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 11px;
+    padding: 5px 0;
+    border: none;
+    background: transparent;
+    color: var(--color-ink);
+    cursor: pointer;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.request-brand:hover {
+    opacity: 0.82;
+    transform: translateY(-1px);
+}
+
+.request-brand img {
+    display: block;
+    width: 38px;
+    height: 38px;
+    padding: 5px;
+    object-fit: contain;
+    border-radius: 11px;
+    background: var(--color-primary-soft);
+}
+
+.request-brand span {
+    color: var(--color-ink);
+    font-family: 'Inter', sans-serif;
+    font-size: 25px;
+    font-weight: 750;
+    letter-spacing: -1.7px;
+    line-height: 1;
+}
+
+.request-brand:focus-visible,
+.request-back:focus-visible,
+.request-submit:focus-visible {
+    outline: 3px solid rgba(71, 121, 109, 0.3);
+    outline-offset: 4px;
+    border-radius: 6px;
+}
+
+.request-back {
+    border: none;
+    background: transparent;
+    color: var(--color-muted);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.request-back:hover {
+    color: var(--color-primary);
+}
+
+/* Conteúdo principal */
+
+.request-main {
+    width: 100%;
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 75px 28px 85px;
+    flex: 1;
+}
+
+.request-heading {
+    margin-bottom: 42px;
+}
+
+.request-eyebrow {
+    display: block;
+    margin-bottom: 17px;
+    color: var(--color-primary);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.8px;
+}
+
+.request-heading h1,
+.request-success h1 {
+    color: var(--color-ink);
+    font-size: clamp(34px, 5vw, 46px);
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: -2px;
+}
+
+.request-heading h1 span,
+.request-success h1 span {
+    color: var(--color-primary);
+}
+
+.request-heading p,
+.request-success p {
+    max-width: 480px;
+    margin-top: 17px;
+    color: var(--color-muted);
+    font-size: 13px;
+    line-height: 1.8;
+}
+
+/* Formulário */
+
+.request-form {
+    display: flex;
+    flex-direction: column;
+    gap: 21px;
+    padding: 32px;
+    border: 1px solid var(--color-border);
+    border-radius: 14px;
+    background: var(--color-paper);
+    box-shadow: 0 12px 40px rgba(32, 41, 37, 0.035);
+}
+
+.request-section-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.request-section-title > span {
+    display: grid;
+    place-items: center;
+    width: 27px;
+    height: 27px;
+    border-radius: 7px;
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.request-section-title h2 {
+    color: var(--color-ink);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.request-second-section {
+    margin-top: 13px;
+}
+
+.request-fields-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.request-field {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.request-field label {
+    color: var(--color-ink);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.request-field input,
+.request-field textarea {
+    width: 100%;
+    min-width: 0;
+    padding: 13px 14px;
+    border: 1px solid rgba(32, 41, 37, 0.13);
+    border-radius: 8px;
+    outline: none;
+    background: #FCFDFC;
+    color: var(--color-ink);
+    font-family: inherit;
+    font-size: 12px;
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease,
+        background 0.2s ease;
+}
+
+.request-field input {
+    height: 46px;
+}
+
+.request-field textarea {
+    min-height: 105px;
+    resize: vertical;
+    line-height: 1.6;
+}
+
+.request-field input::placeholder,
+.request-field textarea::placeholder {
+    color: #A5AEA8;
+}
+
+.request-field input:focus,
+.request-field textarea:focus {
+    border-color: var(--color-primary);
+    background: #FFFFFF;
+    box-shadow: 0 0 0 3px rgba(71, 121, 109, 0.09);
+}
+
+.request-field input:disabled,
+.request-field textarea:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+/* Feedback */
+
+.request-error {
+    padding: 13px 15px;
+    border: 1px solid rgba(198, 95, 95, 0.16);
+    border-radius: 8px;
+    background: rgba(198, 95, 95, 0.07);
+    color: #A74848;
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+/* Botão principal */
+
+.request-submit {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 51px;
+    margin-top: 5px;
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    background: var(--color-primary);
+    color: white;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+        background 0.2s ease,
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.request-submit:hover:not(:disabled) {
+    transform: translateY(-2px);
+    background: #3C6B60;
+    box-shadow: 0 7px 18px rgba(71, 121, 109, 0.17);
+}
+
+.request-submit:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.request-submit:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.request-submit > span:not(.request-spinner) {
+    font-size: 17px;
+}
+
+.request-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: request-spin 0.7s linear infinite;
+}
+
+@keyframes request-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.request-disclaimer {
+    color: var(--color-muted);
+    font-size: 10px;
+    line-height: 1.6;
+    text-align: center;
+}
+
+/* Sucesso */
+
+.request-success {
+    padding: 50px 0;
+    animation: request-appear 0.45s ease both;
+}
+
+.request-success-icon {
+    display: grid;
+    place-items: center;
+    width: 55px;
+    height: 55px;
+    margin-bottom: 32px;
+    border-radius: 16px;
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+}
+
+.request-success-icon svg {
+    width: 27px;
+    height: 27px;
+}
+
+.request-success .request-submit {
+    max-width: 230px;
+    margin-top: 32px;
+}
+
+@keyframes request-appear {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Rodapé */
+
+.request-footer {
+    display: flex;
+    justify-content: space-between;
+    padding: 22px 7%;
+    border-top: 1px solid var(--color-border);
+    color: var(--color-muted);
+    font-size: 10px;
+}
+
+/* Responsividade */
+
+@media (max-width: 600px) {
+    .request-header {
+        padding: 20px 22px;
+    }
+
+    .request-brand img {
+        width: 35px;
+        height: 35px;
+    }
+
+    .request-brand span {
+        font-size: 23px;
+    }
+
+    .request-main {
+        padding: 48px 20px 60px;
+    }
+
+    .request-heading {
+        margin-bottom: 30px;
+    }
+
+    .request-heading h1,
+    .request-success h1 {
+        font-size: 35px;
+    }
+
+    .request-form {
+        gap: 19px;
+        padding: 22px 18px;
+    }
+
+    .request-fields-grid {
+        grid-template-columns: 1fr;
+        gap: 19px;
+    }
+
+    .request-footer {
+        padding: 20px 22px;
+    }
+}
+
+@media (max-width: 360px) {
+    .request-back {
+        font-size: 11px;
+    }
+
+    .request-heading h1,
+    .request-success h1 {
+        font-size: 31px;
+    }
+
+    .request-brand {
+        gap: 8px;
+    }
+}
