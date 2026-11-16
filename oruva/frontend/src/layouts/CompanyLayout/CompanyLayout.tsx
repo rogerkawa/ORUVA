@@ -1,0 +1,35 @@
+
+import { useAuth } from '../../contexts/AuthContext';
+
+import Sidebar from '../../components/Sidebar/Sidebar';
+
+import './CompanyLayout.css';
+
+interface CompanyLayoutProps {
+    children: React.ReactNode;
+}
+
+function CompanyLayout({ children }: CompanyLayoutProps) {
+    const { logout } = useAuth();
+
+    return (
+        <div className="company-layout">
+
+            <Sidebar onLogout={logout} />
+
+            <header className="mobile-brand-header">
+                <div className="mobile-brand">
+                    <img src="/logo-oruva.png" alt="Oruva" />
+                    <span>Oruva</span>
+                </div>
+            </header>
+
+            <main className="company-main">
+                {children}
+            </main>
+
+        </div>
+    );
+}
+
+export default CompanyLayout;

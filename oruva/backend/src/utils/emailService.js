@@ -63,6 +63,7 @@ const emailService = {
                 raw
             }
         });
+        console.log('E-MAIL ACEITO PELO GMAIL:', resultado.data.id);
 
         return resultado.data;
     }

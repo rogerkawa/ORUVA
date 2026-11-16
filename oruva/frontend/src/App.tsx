@@ -6,14 +6,15 @@ import { useAuth } from './contexts/AuthContext';
 import Login from './pages/Login/Login';
 import SolicitarAcesso from './pages/SolicitarAcesso/SolicitarAcesso';
 
+import CompanyLayout from './layouts/CompanyLayout/CompanyLayout';
+
 type Pagina = 'login' | 'solicitacao';
 
 function App() {
     const {
         autenticado,
         carregando,
-        usuario,
-        logout
+        usuario
     } = useAuth();
 
     const [pagina, setPagina] = useState<Pagina>('login');
@@ -44,24 +45,21 @@ function App() {
     }
 
     return (
-        <main className="authenticated-placeholder">
-            <div className="authenticated-card">
+        <CompanyLayout>
+            <section className="company-welcome">
                 <span className="authenticated-label">
-                    AUTENTICAÇÃO CONCLUÍDA
+                    AMBIENTE DE TRABALHO
                 </span>
 
-                <h1>Olá, {usuario?.name}.</h1>
+                <h1>
+                    Olá, {usuario?.name}.
+                </h1>
 
                 <p>
-                    Sua sessão no Oruva está ativa.
-                    Em breve, seu ambiente de trabalho estará aqui.
+                    Bem-vindo ao seu espaço de trabalho no Oruva.
                 </p>
-
-                <button onClick={logout}>
-                    Sair da plataforma
-                </button>
-            </div>
-        </main>
+            </section>
+        </CompanyLayout>
     );
 }
 
