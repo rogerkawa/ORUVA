@@ -10,6 +10,7 @@ import categoryRoutes from './categoryRoutes.js';
 import slaPolicyRoutes from './slaPolicyRoutes.js';
 import demandRoutes from './demandRoutes.js';
 import approvalRoutes from './approvalRoutes.js';
+import dashboardRoutes from './dashboardRoutes.js';
 
 const routes = Router();
 
@@ -23,5 +24,6 @@ routes.use('/categories', categoryRoutes);
 routes.use('/sla-policies', slaPolicyRoutes);
 routes.use('/demands', demandRoutes);
 routes.use('/approvals', approvalRoutes);
+routes.use('/dashboard', dashboardRoutes);
 
 export default routes;

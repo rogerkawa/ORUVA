@@ -56,7 +56,6 @@ const demandMessageModel = {
             companyId,
             memberId,
             role,
-            lock: true
         });
 
         if (!demand) {

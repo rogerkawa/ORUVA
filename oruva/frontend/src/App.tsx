@@ -1,13 +1,23 @@
 
-import { Navigate, Outlet, Route, Routes, useNavigate } from 'react-router-dom';
+import {
+    Navigate,
+    Outlet,
+    Route,
+    Routes,
+    useNavigate
+} from 'react-router-dom';
+
 import type { ReactNode } from 'react';
 import { useAuth } from './contexts/AuthContext';
 
 import Login from './pages/Login/Login';
 import SolicitarAcesso from './pages/SolicitarAcesso/SolicitarAcesso';
 import AceitarConvite from './pages/AceitarConvite/AceitarConvite';
-
+import Dashboard from './pages/Dashboard/Dashboard';
 import CompanyLayout from './layouts/CompanyLayout/CompanyLayout';
+import Solicitacoes from './pages/Solicitacoes/Solicitacoes';
+
+
 
 function LoadingScreen() {
     return (
@@ -17,6 +27,7 @@ function LoadingScreen() {
         </div>
     );
 }
+
 
 // Impede usuários não autenticados de acessar a área interna.
 function ProtectedRoute() {
@@ -37,7 +48,7 @@ function ProtectedRoute() {
     );
 }
 
-// Impede usuários autenticados de voltar às telas públicas.
+// Impede usuários autenticados de acessar telas públicas.
 function PublicRoute({ children }: { children: ReactNode }) {
     const { autenticado, carregando } = useAuth();
 
@@ -51,6 +62,7 @@ function PublicRoute({ children }: { children: ReactNode }) {
 
     return <>{children}</>;
 }
+
 
 function LoginPage() {
     const navigate = useNavigate();
@@ -72,6 +84,7 @@ function SolicitarAcessoPage() {
     );
 }
 
+
 function HomeRedirect() {
     const { autenticado, carregando } = useAuth();
 
@@ -87,25 +100,19 @@ function HomeRedirect() {
     );
 }
 
-function CompanyHome() {
-    const { usuario } = useAuth();
 
+function ComingSoon({ title }: { title: string }) {
     return (
-        <section className="company-welcome">
-            <span className="authenticated-label">
-                AMBIENTE DE TRABALHO
-            </span>
-
-            <h1>
-                Olá, {usuario?.name}.
-            </h1>
-
+        <section className="company-placeholder">
+            <span>ORUVA · ÁREA DE TRABALHO</span>
+            <h1>{title}</h1>
             <p>
-                Bem-vindo ao seu espaço de trabalho no Oruva.
+                Esta área está sendo preparada e estará disponível em breve.
             </p>
         </section>
     );
 }
+
 
 function App() {
     return (
@@ -132,19 +139,56 @@ function App() {
                 }
             />
 
-            {/* Convite: não exige autenticação */}
+            {/* Aceitação de convite não exige autenticação */}
             <Route
                 path="/convite/aceitar"
                 element={<AceitarConvite />}
             />
 
-            {/* Área autenticada da empresa */}
+            {/* Área autenticada */}
             <Route element={<ProtectedRoute />}>
-                <Route path="/app" element={<CompanyHome />} />
+                {/* Visão geral */}
+                <Route
+                    path="/app"
+                    element={<Dashboard />}
+                />
+
+                {/* Solicitações */}
+                <Route
+                    path="/app/solicitacoes"
+                    element={<Solicitacoes/>}
+                />
+
+                {/* Processos */}
+                <Route
+                    path="/app/processos"
+                    element={<ComingSoon title="Processos" />}
+                />
+
+                {/* Equipe */}
+                <Route
+                    path="/app/equipe"
+                    element={<ComingSoon title="Equipe" />}
+                />
+
+                {/* Perfil */}
+                <Route
+                    path="/app/perfil"
+                    element={<ComingSoon title="Meu perfil" />}
+                />
+
+                {/* Configurações */}
+                <Route
+                    path="/app/configuracoes"
+                    element={<ComingSoon title="Configurações" />}
+                />
             </Route>
 
             {/* Rota não encontrada */}
-            <Route path="*" element={<HomeRedirect />} />
+            <Route
+                path="*"
+                element={<HomeRedirect />}
+            />
         </Routes>
     );
 }

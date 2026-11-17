@@ -222,14 +222,67 @@ const approvalModel = {
     },
 
     // Listar somente as aprovações liberadas para o membro.
-    async listarPendentes({
-        companyId,
-        memberId,
-        limit = 50,
-        offset = 0
-    }) {
-        const [rows] = await conect.execute(
-            `SELECT
+    
+async listarPendentes({
+    companyId,
+    memberId,
+    limit = 50,
+    offset = 0
+}) {
+    const conditions = `
+        WHERE d.company_id = ?
+          AND d.status = 'pending_approval'
+          AND da.approver_member_id = ?
+          AND da.status = 'pending'
+          AND d.requester_member_id <> ?
+
+          AND NOT EXISTS (
+              SELECT 1
+              FROM demand_approvals previous
+              WHERE previous.demand_id = da.demand_id
+                AND previous.step_order < da.step_order
+                AND previous.status <> 'approved'
+          )
+    `;
+
+    const params = [companyId, memberId, memberId];
+
+    // Buscar a quantidade total, sem limitar a paginação.
+    const [countRows] = await conect.execute(
+        `
+            SELECT COUNT(*) AS total
+            FROM demand_approvals da
+
+            INNER JOIN demands d
+                ON d.id = da.demand_id
+
+            INNER JOIN categories c
+                ON c.id = d.category_id
+
+            INNER JOIN company_members requester
+                ON requester.id = d.requester_member_id
+
+            INNER JOIN users requester_user
+                ON requester_user.id = requester.user_id
+
+            INNER JOIN company_members approver
+                ON approver.id = da.approver_member_id
+               AND approver.company_id = d.company_id
+               AND approver.status = 'active'
+
+            INNER JOIN users approver_user
+                ON approver_user.id = approver.user_id
+               AND approver_user.status = 'active'
+
+            ${conditions}
+        `,
+        params
+    );
+
+    // Buscar somente os registros da página solicitada.
+    const [rows] = await conect.execute(
+        `
+            SELECT
                 da.id AS approval_id,
                 da.step_order,
                 da.created_at AS requested_at,
@@ -244,57 +297,44 @@ const approvalModel = {
                 c.name AS category_name,
                 requester_user.name AS requester_name
 
-             FROM demand_approvals da
+            FROM demand_approvals da
 
-             INNER JOIN demands d
+            INNER JOIN demands d
                 ON d.id = da.demand_id
 
-             INNER JOIN categories c
+            INNER JOIN categories c
                 ON c.id = d.category_id
 
-             INNER JOIN company_members requester
+            INNER JOIN company_members requester
                 ON requester.id = d.requester_member_id
 
-             INNER JOIN users requester_user
+            INNER JOIN users requester_user
                 ON requester_user.id = requester.user_id
 
-             INNER JOIN company_members approver
+            INNER JOIN company_members approver
                 ON approver.id = da.approver_member_id
                AND approver.company_id = d.company_id
                AND approver.status = 'active'
 
-             INNER JOIN users approver_user
+            INNER JOIN users approver_user
                 ON approver_user.id = approver.user_id
                AND approver_user.status = 'active'
 
-             WHERE d.company_id = ?
-               AND d.status = 'pending_approval'
-               AND da.approver_member_id = ?
-               AND da.status = 'pending'
-               AND d.requester_member_id <> ?
+            ${conditions}
 
-               AND NOT EXISTS (
-                    SELECT 1
-                    FROM demand_approvals previous
-                    WHERE previous.demand_id = da.demand_id
-                      AND previous.step_order < da.step_order
-                      AND previous.status <> 'approved'
-               )
+            ORDER BY da.created_at ASC
 
-             ORDER BY da.created_at ASC
+            LIMIT ? OFFSET ?
+        `,
+        [...params, limit, offset]
+    );
 
-             LIMIT ? OFFSET ?`,
-            [
-                companyId,
-                memberId,
-                memberId,
-                limit,
-                offset
-            ]
-        );
+    return {
+        aprovacoes: rows,
+        total: Number(countRows[0].total)
+    };
+},
 
-        return rows;
-    },
 
     // Consultar o fluxo de aprovação de uma demanda.
     async buscarFluxoDemanda({

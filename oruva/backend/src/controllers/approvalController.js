@@ -223,17 +223,14 @@ const approvalController = {
                 });
             }
 
-            const aprovacoes = await approvalModel.listarPendentes({
+            const resultado = await approvalModel.listarPendentes({
                 companyId: req.empresa.company_id,
                 memberId: req.empresa.company_member_id,
                 limit,
                 offset
             });
 
-            return res.status(200).json({
-                total: aprovacoes.length,
-                aprovacoes
-            });
+            return res.status(200).json(resultado);
 
         } catch (error) {
             return responderErro(res, error);
