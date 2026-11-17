@@ -1,4 +1,3 @@
-
 import { useAuth } from '../../contexts/AuthContext';
 
 import Sidebar from '../../components/Sidebar/Sidebar';
@@ -14,20 +13,11 @@ function CompanyLayout({ children }: CompanyLayoutProps) {
 
     return (
         <div className="company-layout">
-
             <Sidebar onLogout={logout} />
-
-            <header className="mobile-brand-header">
-                <div className="mobile-brand">
-                    <img src="/logo-oruva.png" alt="Oruva" />
-                    <span>Oruva</span>
-                </div>
-            </header>
 
             <main className="company-main">
                 {children}
             </main>
-
         </div>
     );
 }

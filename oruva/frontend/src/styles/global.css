@@ -4,7 +4,7 @@
 :root {
     font-family: 'Inter', sans-serif;
 
-    /* Identidade Oruva */
+    /* Identidade Oruva — tema claro */
     --color-ink: #202925;
     --color-muted: #75817A;
     --color-canvas: #F3F5F2;
@@ -26,11 +26,50 @@
     --color-border: rgba(32, 41, 37, 0.10);
     --shadow-card: 0 24px 70px rgba(32, 41, 37, 0.08);
 
+    color-scheme: light;
+
     font-synthesis: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
+
+/* TEMA ESCURO */
+
+:root[data-theme='dark'] {
+    color-scheme: dark;
+
+    --color-ink: #E9EEEB;
+    --color-muted: #9AA8A0;
+    --color-canvas: #111714;
+    --color-paper: #18211C;
+
+    --color-primary: #8BB9A8;
+    --color-primary-soft: #243A31;
+
+    --color-dark: #202B25;
+    --color-dark-surface: #18211C;
+    --color-dark-raised: #111714;
+
+    --color-success: #8BB9A8;
+    --color-danger: #E18A8A;
+    --color-warning: #D8B77F;
+
+    --color-border: rgba(230, 245, 237, 0.10);
+    --shadow-card: 0 24px 70px rgba(0, 0, 0, 0.22);
+}
+
+/* TRANSIÇÃO DE TEMA */
+
+body {
+    background: var(--color-canvas);
+    color: var(--color-ink);
+
+    transition:
+        background-color 0.25s ease,
+        color 0.25s ease;
+}
+
 
 * {
     margin: 0;
@@ -49,6 +88,9 @@ body {
     min-height: 100vh;
     background: var(--color-canvas);
     color: var(--color-ink);
+        transition:
+        background-color 0.25s ease,
+        color 0.25s ease;
 }
 
 body,
@@ -84,6 +126,11 @@ a {
 ::selection {
     color: var(--color-paper);
     background: var(--color-primary);
+}
+
+.mobile-navigation {
+    background: var(--color-paper);
+    border-top: 1px solid var(--color-border);
 }
 
 /* Estados temporários da aplicação */

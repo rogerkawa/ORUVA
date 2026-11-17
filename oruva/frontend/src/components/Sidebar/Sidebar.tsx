@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import {
     LayoutDashboard,
@@ -9,7 +8,11 @@ import {
     Settings,
     UserRound,
     ChevronLeft,
-    LogOut
+    LogOut,
+    Sun,
+    Moon,
+    Palette,
+    ChevronDown
 } from 'lucide-react';
 
 import './Sidebar.css';
@@ -18,33 +21,30 @@ interface SidebarProps {
     onLogout: () => void;
 }
 
+type Theme = 'light' | 'dark';
+
 const navigation = [
-    {
-        label: 'Visão geral',
-        icon: LayoutDashboard,
-        path: 'dashboard'
-    },
-    {
-        label: 'Solicitações',
-        icon: Inbox,
-        path: 'solicitacoes'
-    },
-    {
-        label: 'Processos',
-        icon: ClipboardList,
-        path: 'processos'
-    },
-    {
-        label: 'Equipe',
-        icon: Users,
-        path: 'equipe'
-    }
+    { label: 'Visão geral', icon: LayoutDashboard, path: 'dashboard' },
+    { label: 'Solicitações', icon: Inbox, path: 'solicitacoes' },
+    { label: 'Processos', icon: ClipboardList, path: 'processos' },
+    { label: 'Equipe', icon: Users, path: 'equipe' }
 ];
 
 function Sidebar({ onLogout }: SidebarProps) {
     const [expanded, setExpanded] = useState(true);
     const [activePage, setActivePage] = useState('dashboard');
     const [rotationKey, setRotationKey] = useState(0);
+
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [appearanceOpen, setAppearanceOpen] = useState(false);
+
+    const [theme, setTheme] = useState<Theme>(() => {
+    const savedTheme = localStorage.getItem('oruva-theme');
+
+    return savedTheme === 'dark' ? 'dark' : 'light';
+});
+
+    const mobileMenuRef = useRef<HTMLDivElement>(null);
 
     function toggleSidebar() {
         setExpanded((previous) => !previous);
@@ -53,16 +53,61 @@ function Sidebar({ onLogout }: SidebarProps) {
 
     function navigate(path: string) {
         setActivePage(path);
+        setMobileMenuOpen(false);
+        setAppearanceOpen(false);
     }
+
+    function changeTheme(newTheme: Theme) {
+        setTheme(newTheme);
+    }
+
+    function toggleMobileMenu() {
+        setMobileMenuOpen((previous) => !previous);
+        setAppearanceOpen(false);
+    }
+
+    useEffect(() => {
+        document.documentElement.dataset.theme = theme;
+        localStorage.setItem('oruva-theme', theme);
+    }, [theme]);
+
+    useEffect(() => {
+        function handleOutsideClick(event: MouseEvent) {
+            if (
+                mobileMenuRef.current &&
+                !mobileMenuRef.current.contains(event.target as Node)
+            ) {
+                setMobileMenuOpen(false);
+                setAppearanceOpen(false);
+            }
+        }
+
+        function handleEscape(event: KeyboardEvent) {
+            if (event.key === 'Escape') {
+                setMobileMenuOpen(false);
+                setAppearanceOpen(false);
+            }
+        }
+
+        document.addEventListener('mousedown', handleOutsideClick);
+        document.addEventListener('keydown', handleEscape);
+
+        return () => {
+            document.removeEventListener('mousedown', handleOutsideClick);
+            document.removeEventListener('keydown', handleEscape);
+        };
+    }, []);
 
     return (
         <>
-            {/* Sidebar desktop */}
+            {/* SIDEBAR DESKTOP */}
+
             <aside
-                className={`sidebar ${expanded ? 'sidebar-expanded' : 'sidebar-collapsed'}`}
+                className={`sidebar ${
+                    expanded ? 'sidebar-expanded' : 'sidebar-collapsed'
+                }`}
             >
                 <div className="sidebar-header">
-
                     <button
                         className="sidebar-brand"
                         onClick={toggleSidebar}
@@ -78,9 +123,7 @@ function Sidebar({ onLogout }: SidebarProps) {
                             />
                         </span>
 
-                        <span className="sidebar-brand-name">
-                            Oruva
-                        </span>
+                        <span className="sidebar-brand-name">Oruva</span>
                     </button>
 
                     <button
@@ -93,11 +136,9 @@ function Sidebar({ onLogout }: SidebarProps) {
                             className="sidebar-toggle-icon"
                         />
                     </button>
-
                 </div>
 
                 <div className="sidebar-content">
-
                     <span className="sidebar-section-label">
                         MENU PRINCIPAL
                     </span>
@@ -110,7 +151,9 @@ function Sidebar({ onLogout }: SidebarProps) {
                             return (
                                 <button
                                     key={item.path}
-                                    className={`sidebar-link ${active ? 'active' : ''}`}
+                                    className={`sidebar-link ${
+                                        active ? 'active' : ''
+                                    }`}
                                     onClick={() => navigate(item.path)}
                                     title={!expanded ? item.label : undefined}
                                 >
@@ -129,13 +172,14 @@ function Sidebar({ onLogout }: SidebarProps) {
                     </nav>
 
                     <div className="sidebar-bottom-navigation">
-
                         <span className="sidebar-section-label">
                             PREFERÊNCIAS
                         </span>
 
                         <button
-                            className={`sidebar-link ${activePage === 'perfil' ? 'active' : ''}`}
+                            className={`sidebar-link ${
+                                activePage === 'perfil' ? 'active' : ''
+                            }`}
                             onClick={() => navigate('perfil')}
                             title={!expanded ? 'Meu perfil' : undefined}
                         >
@@ -146,7 +190,9 @@ function Sidebar({ onLogout }: SidebarProps) {
                         </button>
 
                         <button
-                            className={`sidebar-link ${activePage === 'configuracoes' ? 'active' : ''}`}
+                            className={`sidebar-link ${
+                                activePage === 'configuracoes' ? 'active' : ''
+                            }`}
                             onClick={() => navigate('configuracoes')}
                             title={!expanded ? 'Configurações' : undefined}
                         >
@@ -155,13 +201,10 @@ function Sidebar({ onLogout }: SidebarProps) {
                                 Configurações
                             </span>
                         </button>
-
                     </div>
-
                 </div>
 
                 <div className="sidebar-footer">
-
                     <div className="sidebar-user">
                         <div className="sidebar-avatar">
                             <UserRound size={18} />
@@ -183,21 +226,125 @@ function Sidebar({ onLogout }: SidebarProps) {
                             Sair da plataforma
                         </span>
                     </button>
-
                 </div>
             </aside>
 
-            {/* Navegação mobile e tablet */}
-            <nav className="mobile-navigation">
+            {/* MENU DE CONTA MOBILE */}
 
-                {navigation.slice(0, 4).map((item) => {
+            <div className="mobile-account-menu" ref={mobileMenuRef}>
+                <button
+                    className={`mobile-account-trigger ${
+                        mobileMenuOpen ? 'is-open' : ''
+                    }`}
+                    onClick={toggleMobileMenu}
+                    aria-label="Abrir menu da conta"
+                    aria-expanded={mobileMenuOpen}
+                    aria-haspopup="true"
+                >
+                    <img src="/logo-oruva.png" alt="" />
+                    <ChevronDown size={15} />
+                </button>
+
+                {mobileMenuOpen && (
+                    <div className="mobile-account-dropdown">
+                        <div className="mobile-account-heading">
+                            <span>CONTA E PREFERÊNCIAS</span>
+                            <strong>Seu espaço no Oruva</strong>
+                        </div>
+
+                        <button
+                            className="mobile-account-option"
+                            onClick={() => navigate('perfil')}
+                        >
+                            <UserRound size={18} />
+                            <span>Meu perfil</span>
+                        </button>
+
+                        <button
+                            className="mobile-account-option"
+                            onClick={() => navigate('configuracoes')}
+                        >
+                            <Settings size={18} />
+                            <span>Configurações</span>
+                        </button>
+
+                        <div className="mobile-account-divider" />
+
+                        <button
+                            className={`mobile-account-option ${
+                                appearanceOpen ? 'selected' : ''
+                            }`}
+                            onClick={() =>
+                                setAppearanceOpen((previous) => !previous)
+                            }
+                            aria-expanded={appearanceOpen}
+                        >
+                            <Palette size={18} />
+                            <span>Aparência</span>
+                            <ChevronDown
+                                size={15}
+                                className={`mobile-appearance-chevron ${
+                                    appearanceOpen ? 'rotated' : ''
+                                }`}
+                            />
+                        </button>
+
+                        {appearanceOpen && (
+                            <div className="mobile-theme-options">
+                                <button
+                                    className={`mobile-theme-option ${
+                                        theme === 'light' ? 'active' : ''
+                                    }`}
+                                    onClick={() => changeTheme('light')}
+                                >
+                                    <Sun size={17} />
+                                    <span>Claro</span>
+                                    {theme === 'light' && (
+                                        <span className="mobile-theme-check">✓</span>
+                                    )}
+                                </button>
+
+                                <button
+                                    className={`mobile-theme-option ${
+                                        theme === 'dark' ? 'active' : ''
+                                    }`}
+                                    onClick={() => changeTheme('dark')}
+                                >
+                                    <Moon size={17} />
+                                    <span>Escuro</span>
+                                    {theme === 'dark' && (
+                                        <span className="mobile-theme-check">✓</span>
+                                    )}
+                                </button>
+                            </div>
+                        )}
+
+                        <div className="mobile-account-divider" />
+
+                        <button
+                            className="mobile-account-option mobile-account-logout"
+                            onClick={onLogout}
+                        >
+                            <LogOut size={18} />
+                            <span>Sair da plataforma</span>
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            {/* NAVEGAÇÃO INFERIOR MOBILE */}
+
+            <nav className="mobile-navigation">
+                {navigation.map((item) => {
                     const Icon = item.icon;
                     const active = activePage === item.path;
 
                     return (
                         <button
                             key={item.path}
-                            className={`mobile-navigation-item ${active ? 'active' : ''}`}
+                            className={`mobile-navigation-item ${
+                                active ? 'active' : ''
+                            }`}
                             onClick={() => navigate(item.path)}
                             aria-label={item.label}
                         >
@@ -206,16 +353,6 @@ function Sidebar({ onLogout }: SidebarProps) {
                         </button>
                     );
                 })}
-
-                <button
-                    className={`mobile-navigation-item ${activePage === 'perfil' ? 'active' : ''}`}
-                    onClick={() => navigate('perfil')}
-                    aria-label="Meu perfil"
-                >
-                    <UserRound size={21} strokeWidth={1.8} />
-                    <span>Perfil</span>
-                </button>
-
             </nav>
         </>
     );
