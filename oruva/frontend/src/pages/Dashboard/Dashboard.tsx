@@ -4,8 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     Activity,
     AlertCircle,
-    ArrowDownRight,
-    ArrowUpRight,
     CheckCircle2,
     Clock3,
     Inbox,
