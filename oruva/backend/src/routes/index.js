@@ -11,6 +11,8 @@ import slaPolicyRoutes from './slaPolicyRoutes.js';
 import demandRoutes from './demandRoutes.js';
 import approvalRoutes from './approvalRoutes.js';
 import dashboardRoutes from './dashboardRoutes.js';
+import processTemplateRoutes from './processTemplateRoutes.js';
+import processRoutes from './processRoutes.js';
 
 const routes = Router();
 
@@ -25,5 +27,7 @@ routes.use('/sla-policies', slaPolicyRoutes);
 routes.use('/demands', demandRoutes);
 routes.use('/approvals', approvalRoutes);
 routes.use('/dashboard', dashboardRoutes);
+routes.use('/process-templates', processTemplateRoutes);
+routes.use('/processes', processRoutes);
 
 export default routes;

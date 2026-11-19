@@ -16,6 +16,7 @@ import AceitarConvite from './pages/AceitarConvite/AceitarConvite';
 import Dashboard from './pages/Dashboard/Dashboard';
 import CompanyLayout from './layouts/CompanyLayout/CompanyLayout';
 import Solicitacoes from './pages/Solicitacoes/Solicitacoes';
+import Processos from './pages/Processos/Processos';
 
 
 
@@ -156,13 +157,13 @@ function App() {
                 {/* Solicitações */}
                 <Route
                     path="/app/solicitacoes"
-                    element={<Solicitacoes/>}
+                    element={<Solicitacoes />}
                 />
 
                 {/* Processos */}
                 <Route
                     path="/app/processos"
-                    element={<ComingSoon title="Processos" />}
+                    element={<Processos />}
                 />
 
                 {/* Equipe */}
