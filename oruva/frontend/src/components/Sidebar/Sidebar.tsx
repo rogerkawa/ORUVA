@@ -6,7 +6,8 @@ import {
     LayoutDashboard,
     Inbox,
     ClipboardList,
-    Users,
+    Building2,
+    Tag,
     Settings,
     UserRound,
     ChevronLeft,
@@ -37,14 +38,19 @@ const navigation = [
         path: '/app/solicitacoes'
     },
     {
+        label: 'Categorias',
+        icon: Tag,
+        path: '/app/categorias'
+    },
+    {
         label: 'Processos',
         icon: ClipboardList,
         path: '/app/processos'
     },
     {
-        label: 'Equipe',
-        icon: Users,
-        path: '/app/equipe'
+        label: 'Estrutura',
+        icon: Building2,
+        path: '/app/estrutura'
     }
 ];
 
@@ -151,9 +157,8 @@ function Sidebar({ onLogout }: SidebarProps) {
         <>
             {/* SIDEBAR DESKTOP */}
             <aside
-                className={`sidebar ${
-                    expanded ? 'sidebar-expanded' : 'sidebar-collapsed'
-                }`}
+                className={`sidebar ${expanded ? 'sidebar-expanded' : 'sidebar-collapsed'
+                    }`}
             >
                 {/* CABEÇALHO */}
                 <div className="sidebar-header">
@@ -208,9 +213,8 @@ function Sidebar({ onLogout }: SidebarProps) {
                                 <button
                                     key={item.path}
                                     type="button"
-                                    className={`sidebar-link ${
-                                        active ? 'active' : ''
-                                    }`}
+                                    className={`sidebar-link ${active ? 'active' : ''
+                                        }`}
                                     onClick={() => handleNavigate(item.path)}
                                     title={!expanded ? item.label : undefined}
                                     aria-current={active ? 'page' : undefined}
@@ -240,9 +244,8 @@ function Sidebar({ onLogout }: SidebarProps) {
 
                         <button
                             type="button"
-                            className={`sidebar-link ${
-                                isActive('/app/perfil') ? 'active' : ''
-                            }`}
+                            className={`sidebar-link ${isActive('/app/perfil') ? 'active' : ''
+                                }`}
                             onClick={() =>
                                 handleAccountNavigate('/app/perfil')
                             }
@@ -257,9 +260,8 @@ function Sidebar({ onLogout }: SidebarProps) {
 
                         <button
                             type="button"
-                            className={`sidebar-link ${
-                                isActive('/app/configuracoes') ? 'active' : ''
-                            }`}
+                            className={`sidebar-link ${isActive('/app/configuracoes') ? 'active' : ''
+                                }`}
                             onClick={() =>
                                 handleAccountNavigate('/app/configuracoes')
                             }
@@ -309,9 +311,8 @@ function Sidebar({ onLogout }: SidebarProps) {
             >
                 <button
                     type="button"
-                    className={`mobile-account-trigger ${
-                        mobileMenuOpen ? 'is-open' : ''
-                    }`}
+                    className={`mobile-account-trigger ${mobileMenuOpen ? 'is-open' : ''
+                        }`}
                     onClick={toggleMobileMenu}
                     aria-label="Abrir menu da conta"
                     aria-expanded={mobileMenuOpen}
@@ -331,9 +332,8 @@ function Sidebar({ onLogout }: SidebarProps) {
 
                         <button
                             type="button"
-                            className={`mobile-account-option ${
-                                isActive('/app/perfil') ? 'selected' : ''
-                            }`}
+                            className={`mobile-account-option ${isActive('/app/perfil') ? 'selected' : ''
+                                }`}
                             onClick={() =>
                                 handleAccountNavigate('/app/perfil')
                             }
@@ -344,9 +344,8 @@ function Sidebar({ onLogout }: SidebarProps) {
 
                         <button
                             type="button"
-                            className={`mobile-account-option ${
-                                isActive('/app/configuracoes') ? 'selected' : ''
-                            }`}
+                            className={`mobile-account-option ${isActive('/app/configuracoes') ? 'selected' : ''
+                                }`}
                             onClick={() =>
                                 handleAccountNavigate('/app/configuracoes')
                             }
@@ -360,9 +359,8 @@ function Sidebar({ onLogout }: SidebarProps) {
                         {/* APARÊNCIA */}
                         <button
                             type="button"
-                            className={`mobile-account-option ${
-                                appearanceOpen ? 'selected' : ''
-                            }`}
+                            className={`mobile-account-option ${appearanceOpen ? 'selected' : ''
+                                }`}
                             onClick={() =>
                                 setAppearanceOpen((previous) => !previous)
                             }
@@ -374,9 +372,8 @@ function Sidebar({ onLogout }: SidebarProps) {
 
                             <ChevronDown
                                 size={15}
-                                className={`mobile-appearance-chevron ${
-                                    appearanceOpen ? 'rotated' : ''
-                                }`}
+                                className={`mobile-appearance-chevron ${appearanceOpen ? 'rotated' : ''
+                                    }`}
                             />
                         </button>
 
@@ -384,9 +381,8 @@ function Sidebar({ onLogout }: SidebarProps) {
                             <div className="mobile-theme-options">
                                 <button
                                     type="button"
-                                    className={`mobile-theme-option ${
-                                        theme === 'light' ? 'active' : ''
-                                    }`}
+                                    className={`mobile-theme-option ${theme === 'light' ? 'active' : ''
+                                        }`}
                                     onClick={() => changeTheme('light')}
                                 >
                                     <Sun size={17} />
@@ -401,9 +397,8 @@ function Sidebar({ onLogout }: SidebarProps) {
 
                                 <button
                                     type="button"
-                                    className={`mobile-theme-option ${
-                                        theme === 'dark' ? 'active' : ''
-                                    }`}
+                                    className={`mobile-theme-option ${theme === 'dark' ? 'active' : ''
+                                        }`}
                                     onClick={() => changeTheme('dark')}
                                 >
                                     <Moon size={17} />
@@ -446,9 +441,8 @@ function Sidebar({ onLogout }: SidebarProps) {
                         <button
                             key={item.path}
                             type="button"
-                            className={`mobile-navigation-item ${
-                                active ? 'active' : ''
-                            }`}
+                            className={`mobile-navigation-item ${active ? 'active' : ''
+                                }`}
                             onClick={() => handleNavigate(item.path)}
                             aria-label={item.label}
                             aria-current={active ? 'page' : undefined}

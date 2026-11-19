@@ -17,6 +17,8 @@ import Dashboard from './pages/Dashboard/Dashboard';
 import CompanyLayout from './layouts/CompanyLayout/CompanyLayout';
 import Solicitacoes from './pages/Solicitacoes/Solicitacoes';
 import Processos from './pages/Processos/Processos';
+import Estrutura from './pages/Estrutura/Estrutura';
+import Categorias from './pages/Categorias/Categorias';
 
 
 
@@ -165,11 +167,21 @@ function App() {
                     path="/app/processos"
                     element={<Processos />}
                 />
+                {/* Estrutura */}
+                <Route
+                    path="/app/estrutura"
+                    element={<Estrutura />}
+                />
 
                 {/* Equipe */}
                 <Route
                     path="/app/equipe"
-                    element={<ComingSoon title="Equipe" />}
+                    element={<Navigate to="/app/estrutura" replace />}
+                />
+                {/* Categorias */}
+                <Route
+                    path="/app/categorias"
+                    element={<Categorias />}
                 />
 
                 {/* Perfil */}
